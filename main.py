@@ -1,7 +1,7 @@
 import discord
+import random
+from googleapiclient.discovery import build
 from discord.ext import commands
-import os
-from dotenv import load_dotenv
 
 # Function to read token from a file
 def load_token(filename):
@@ -11,6 +11,8 @@ def load_token(filename):
 
 # Load bot token from 'token.txt'
 TOKEN = load_token("hidden_token.txt")
+GOOGLE_API_KEY = load_token("GOOGLE_API_KEY.txt")
+CSE_ID = load_token('CSE_ID.txt')
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -24,5 +26,52 @@ async def on_ready():
 @bot.command(name='test')
 async def hello(ctx):
     await ctx.send("received!")
+
+# Function to search Google Images
+def google_image_search(query, num_results=10):
+    """Search for multiple images."""
+    service = build("customsearch", "v1", developerKey=GOOGLE_API_KEY)
+    res = service.cse().list(q=query, cx=CSE_ID, searchType="image", num=num_results).execute()
+    if "items" in res:
+        return [item["link"] for item in res["items"]]  # Return a list of image URLs
+    return []
+
+# Create a View with Buttons
+class ImagePaginationView(discord.ui.View):
+    def __init__(self, images):
+        super().__init__()
+        self.images = images
+        self.index = 0
+
+    async def update_message(self, interaction: discord.Interaction):
+        """Update the message with the new image."""
+        await interaction.response.defer()  # Acknowledge first
+        embed = discord.Embed(title="Google Image Result", color=discord.Color.blue())
+        embed.set_image(url=self.images[self.index])
+        await interaction.message.edit(embed=embed, view=self)
+
+    @discord.ui.button(label="⬅️ Prev", style=discord.ButtonStyle.primary)
+    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.index > 0:
+            self.index -= 1
+            await self.update_message(interaction)
+
+    @discord.ui.button(label="➡️ Next", style=discord.ButtonStyle.primary)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.index < len(self.images) - 1:
+            self.index += 1
+            await self.update_message(interaction)
+
+# Command to fetch an image with pagination
+@bot.command(name='im')
+async def image(ctx, *, query: str):
+    images = google_image_search(query)
+    if images:
+        embed = discord.Embed(title="Google Image Result", color=discord.Color.blue())
+        embed.set_image(url=images[0])
+        view = ImagePaginationView(images)
+        await ctx.send(embed=embed, view=view)
+    else:
+        await ctx.send("No images found!")
 
 bot.run(TOKEN)
