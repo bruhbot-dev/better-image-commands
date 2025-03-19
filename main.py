@@ -28,19 +28,28 @@ async def hello(ctx):
     await ctx.send("received!")
 
 # Function to search Google Images
-def google_image_search(query, num_results=10):
-    """Search for multiple images."""
+
+def google_image_search(query, num_results=10, start=1):
     service = build("customsearch", "v1", developerKey=GOOGLE_API_KEY)
-    res = service.cse().list(q=query, cx=CSE_ID, searchType="image", num=num_results).execute()
+    
+    start_index = (start - 1) * num_results + 1  # Calculate start index for pagination
+    res = service.cse().list(
+        q=query, 
+        cx=CSE_ID, 
+        searchType="image", 
+        num=num_results, 
+        start=start_index
+    ).execute()
+    
     if "items" in res:
         return [item["link"] for item in res["items"]]  # Return a list of image URLs
     return []
-
 # Create a View with Buttons
 class ImagePaginationView(discord.ui.View):
-    def __init__(self, images):
+    def __init__(self, images, query):
         super().__init__()
         self.images = images
+        self.query = query  # Store the original query
         self.index = 0
 
     async def update_message(self, interaction: discord.Interaction):
@@ -60,16 +69,25 @@ class ImagePaginationView(discord.ui.View):
     async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.index < len(self.images) - 1:
             self.index += 1
+            if self.index>=len(self.images) -1:
+                print(1)
+                print(self.images)
+
+                self.images += google_image_search(self.query, 10, len(self.images)-1)
+                print(2)
+
+                print(self.images)
             await self.update_message(interaction)
 
 # Command to fetch an image with pagination
 @bot.command(name='im')
 async def image(ctx, *, query: str):
-    images = google_image_search(query)
+    images = google_image_search(query, 10, 1)
+    print(images)
     if images:
         embed = discord.Embed(title="Google Image Result", color=discord.Color.blue())
         embed.set_image(url=images[0])
-        view = ImagePaginationView(images)
+        view = ImagePaginationView(images, query)
         await ctx.send(embed=embed, view=view)
     else:
         await ctx.send("No images found!")
