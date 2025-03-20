@@ -59,6 +59,8 @@ class ImagePaginationView(discord.ui.View):
         embed.set_image(url=self.images[self.index])
         await interaction.message.edit(embed=embed, view=self)
 
+
+
     @discord.ui.button(label="⬅️ Prev", style=discord.ButtonStyle.primary)
     async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.index > 0:
@@ -78,6 +80,11 @@ class ImagePaginationView(discord.ui.View):
 
                 print(self.images)
             await self.update_message(interaction)
+
+    @discord.ui.button(label="🗑️ Del", style=discord.ButtonStyle.primary)
+    async def delete(self, interaction: discord.Interaction, button: discord.ui.Button):
+   
+        await interaction.message.delete()
 
 # Command to fetch an image with pagination
 @bot.command(name='im')
