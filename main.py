@@ -46,10 +46,11 @@ def google_image_search(query, num_results=10, start=1):
     return []
 # Create a View with Buttons
 class ImagePaginationView(discord.ui.View):
-    def __init__(self, images, query):
+    def __init__(self, images, query, userID):
         super().__init__()
         self.images = images
         self.query = query  # Store the original query
+        self.userID = userID
         self.index = 0
 
     async def update_message(self, interaction: discord.Interaction):
@@ -63,38 +64,42 @@ class ImagePaginationView(discord.ui.View):
 
     @discord.ui.button(label="⬅️ Prev", style=discord.ButtonStyle.primary)
     async def previous(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.index > 0:
-            self.index -= 1
-            await self.update_message(interaction)
+        if interaction.user == self.userID:
+            if self.index > 0:
+                self.index -= 1
+                await self.update_message(interaction)
 
     @discord.ui.button(label="➡️ Next", style=discord.ButtonStyle.primary)
     async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.index < len(self.images) - 1:
-            self.index += 1
-            if self.index>=len(self.images) -1:
-                print(1)
-                print(self.images)
+        if interaction.user == self.userID:
+            if self.index < len(self.images) - 1:
+                self.index += 1
+                if self.index>=len(self.images) -1:
+                    print(1)
+                    print(self.images)
 
-                self.images += google_image_search(self.query, 10, len(self.images)-1)
-                print(2)
+                    self.images += google_image_search(self.query, 10, len(self.images)-1)
+                    print(2)
 
-                print(self.images)
-            await self.update_message(interaction)
+                    print(self.images)
+                await self.update_message(interaction)
 
     @discord.ui.button(label="🗑️ Del", style=discord.ButtonStyle.primary)
     async def delete(self, interaction: discord.Interaction, button: discord.ui.Button):
-   
-        await interaction.message.delete()
+        if interaction.user == self.userID:
+            await interaction.message.delete()
 
 # Command to fetch an image with pagination
 @bot.command(name='im')
 async def image(ctx, *, query: str):
+    userID = ctx.message.author #get user id here
+    print(ctx.message.author)
     images = google_image_search(query, 10, 1)
     print(images)
     if images:
         embed = discord.Embed(title="Google Image Result", color=discord.Color.blue())
         embed.set_image(url=images[0])
-        view = ImagePaginationView(images, query)
+        view = ImagePaginationView(images, query, userID)
         await ctx.send(embed=embed, view=view)
     else:
         await ctx.send("No images found!")
