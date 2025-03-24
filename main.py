@@ -58,6 +58,7 @@ class ImagePaginationView(discord.ui.View):
         await interaction.response.defer()  # Acknowledge first
         embed = discord.Embed(title="Google Image Result", color=discord.Color.blue())
         embed.set_image(url=self.images[self.index])
+        embed.set_footer(text=self.index+1)
         await interaction.message.edit(embed=embed, view=self)
 
 
@@ -99,6 +100,7 @@ async def image(ctx, *, query: str):
     if images:
         embed = discord.Embed(title="Google Image Result", color=discord.Color.blue())
         embed.set_image(url=images[0])
+        embed.set_footer(text = 1)
         view = ImagePaginationView(images, query, userID)
         await ctx.send(embed=embed, view=view)
     else:
